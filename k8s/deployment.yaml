@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: flask-todo
-          image: image-registry.openshift-image-registry.svc:5000/$(PROJECT_NAMESPACE)/flask-todo:latest
+          image: "{{CONTAINER_IMAGE}}"
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
