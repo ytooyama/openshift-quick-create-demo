@@ -1,25 +1,14 @@
 schemaVersion: 2.2.0
 metadata:
   name: flask-todo-devfile
-variables:
-  CONTAINER_IMAGE: image-registry.openshift-image-registry.svc:5000/{{PROJECT_NAME}}/flask-todo:latest
 
 components:
-  - name: runtime
-    container:
-      image: registry.access.redhat.com/ubi9/python-311:latest
-      mountSources: true
-      endpoints:
-        - name: http-8080
-          targetPort: 8080
-          exposure: public
-
   - name: app-image
     image:
-      imageName: "{{CONTAINER_IMAGE}}"
+      imageName: quay.io/ytooyama/flask-todo:latest
       dockerfile:
-        uri: ./Dockerfile
-        buildContext: ${PROJECTS_ROOT}
+        uri: Dockerfile
+        buildContext: .
 
   - name: app-deployment
     kubernetes:
@@ -39,21 +28,6 @@ commands:
       component: app-image
     group:
       kind: build
-      isDefault: true
-
-  - id: install-deps
-    exec:
-      component: runtime
-      commandLine: pip install -r requirements.txt
-      workingDir: "{{PROJECT_SOURCE}}"
-
-  - id: run-app
-    exec:
-      component: runtime
-      commandLine: python app.py
-      workingDir: "{{PROJECT_SOURCE}}"
-    group:
-      kind: run
       isDefault: true
 
   - id: deploy-app
@@ -83,7 +57,3 @@ commands:
     group:
       kind: deploy
       isDefault: true
-
-events:
-  postStart:
-    - install-deps

@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: flask-todo
-          image: "{{CONTAINER_IMAGE}}"
+          image: quay.io/ytooyama/flask-todo:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
