@@ -33,6 +33,9 @@ commands:
   - id: deploy-app
     apply:
       component: app-deployment
+      group:
+        kind: deploy
+        isDefault: true
 
   - id: expose-service
     apply:
@@ -54,6 +57,3 @@ commands:
       commands:
         - build-image
         - deploy-k8s
-      group:
-        kind: deploy
-        isDefault: true
