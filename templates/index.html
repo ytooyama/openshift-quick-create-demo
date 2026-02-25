@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Todo App</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --accent: #0ea5e9;
+      --danger: #ef4444;
+      --border: #dbe4ef;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #eef6ff 0%, var(--bg) 100%);
+      color: var(--text);
+    }
+    .container {
+      width: min(820px, 94vw);
+      margin: 40px auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    }
+    h1 { margin: 0 0 18px; font-size: 1.5rem; }
+    .form-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1fr;
+      margin-bottom: 18px;
+    }
+    input, textarea, button {
+      font: inherit;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+    }
+    textarea { min-height: 86px; resize: vertical; }
+    button {
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+      width: fit-content;
+    }
+    button.secondary { background: #64748b; }
+    button.danger { background: var(--danger); }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .muted { color: var(--muted); font-size: 0.92rem; }
+    ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+    li {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+    .todo-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+    }
+    .title {
+      font-weight: 700;
+      margin-right: 8px;
+    }
+    .done { text-decoration: line-through; color: var(--muted); }
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>Todo App</h1>
+
+    <section class="form-grid">
+      <input id="title" type="text" placeholder="Title" maxlength="255">
+      <textarea id="description" placeholder="Description (optional)"></textarea>
+      <button id="createBtn" type="button">Add Todo</button>
+    </section>
+
+    <div class="toolbar">
+      <button id="refreshBtn" class="secondary" type="button">Refresh</button>
+      <span id="message" class="muted"></span>
+    </div>
+
+    <ul id="todoList"></ul>
+  </main>
+
+  <script>
+    const titleEl = document.getElementById('title');
+    const descriptionEl = document.getElementById('description');
+    const createBtn = document.getElementById('createBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const todoList = document.getElementById('todoList');
+    const message = document.getElementById('message');
+
+    function setMessage(text) {
+      message.textContent = text;
+      if (text) {
+        setTimeout(() => {
+          if (message.textContent === text) message.textContent = '';
+        }, 2500);
+      }
+    }
+
+    async function requestJson(url, options = {}) {
+      const res = await fetch(url, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options,
+      });
+      if (!res.ok) {
+        let detail = `HTTP ${res.status}`;
+        try {
+          const body = await res.json();
+          if (body.error) detail = body.error;
+        } catch (_) {}
+        throw new Error(detail);
+      }
+      if (res.status === 204) return null;
+      return await res.json();
+    }
+
+    function renderTodos(todos) {
+      todoList.innerHTML = '';
+      if (!todos.length) {
+        const empty = document.createElement('li');
+        empty.className = 'muted';
+        empty.textContent = 'No todos yet.';
+        todoList.appendChild(empty);
+        return;
+      }
+
+      todos.forEach((todo) => {
+        const li = document.createElement('li');
+
+        const head = document.createElement('div');
+        head.className = 'todo-head';
+
+        const textWrap = document.createElement('div');
+        const title = document.createElement('span');
+        title.className = `title ${todo.is_done ? 'done' : ''}`;
+        title.textContent = todo.title;
+        textWrap.appendChild(title);
+
+        if (todo.description) {
+          const desc = document.createElement('div');
+          desc.className = `muted ${todo.is_done ? 'done' : ''}`;
+          desc.textContent = todo.description;
+          textWrap.appendChild(desc);
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+
+        const toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'secondary';
+        toggleBtn.textContent = todo.is_done ? 'Mark Undone' : 'Mark Done';
+        toggleBtn.addEventListener('click', async () => {
+          try {
+            await requestJson(`/todos/${todo.id}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ is_done: !todo.is_done })
+            });
+            await loadTodos();
+          } catch (err) {
+            setMessage(err.message);
+          }
+        });
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'danger';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.addEventListener('click', async () => {
+          try {
+            await requestJson(`/todos/${todo.id}`, { method: 'DELETE' });
+            await loadTodos();
+          } catch (err) {
+            setMessage(err.message);
+          }
+        });
+
+        actions.appendChild(toggleBtn);
+        actions.appendChild(deleteBtn);
+
+        head.appendChild(textWrap);
+        head.appendChild(actions);
+        li.appendChild(head);
+        todoList.appendChild(li);
+      });
+    }
+
+    async function loadTodos() {
+      try {
+        const todos = await requestJson('/todos');
+        renderTodos(todos);
+      } catch (err) {
+        setMessage(`Load failed: ${err.message}`);
+      }
+    }
+
+    createBtn.addEventListener('click', async () => {
+      const title = titleEl.value.trim();
+      const description = descriptionEl.value.trim();
+      if (!title) {
+        setMessage('Title is required.');
+        return;
+      }
+
+      try {
+        await requestJson('/todos', {
+          method: 'POST',
+          body: JSON.stringify({
+            title,
+            description: description || null,
+          }),
+        });
+        titleEl.value = '';
+        descriptionEl.value = '';
+        await loadTodos();
+        setMessage('Todo added.');
+      } catch (err) {
+        setMessage(`Create failed: ${err.message}`);
+      }
+    });
+
+    refreshBtn.addEventListener('click', loadTodos);
+    loadTodos();
+  </script>
+</body>
+</html>

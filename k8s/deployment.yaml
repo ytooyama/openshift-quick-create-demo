@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-todo
+  labels:
+    app: flask-todo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flask-todo
+  template:
+    metadata:
+      labels:
+        app: flask-todo
+    spec:
+      containers:
+        - name: flask-todo
+          image: image-registry.openshift-image-registry.svc:5000/$(PROJECT_NAMESPACE)/flask-todo:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"

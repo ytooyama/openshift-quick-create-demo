@@ -1,0 +1,60 @@
+schemaVersion: 2.2.0
+metadata:
+  name: flask-todo-devfile
+
+components:
+  - name: runtime
+    container:
+      image: registry.access.redhat.com/ubi9/python-311:latest
+      mountSources: true
+      endpoints:
+        - name: http-8080
+          targetPort: 8080
+          exposure: public
+
+  - name: app-deployment
+    kubernetes:
+      uri: k8s/deployment.yaml
+
+  - name: app-service
+    kubernetes:
+      uri: k8s/service.yaml
+
+  - name: app-route
+    kubernetes:
+      uri: k8s/route.yaml
+
+commands:
+  - id: install-deps
+    exec:
+      component: runtime
+      commandLine: pip install -r requirements.txt
+      workingDir: ${PROJECT_SOURCE}
+
+  - id: run-app
+    exec:
+      component: runtime
+      commandLine: python app.py
+      workingDir: ${PROJECT_SOURCE}
+      group:
+        kind: run
+        isDefault: true
+
+  - id: deploy-app
+    apply:
+      component: app-deployment
+      group:
+        kind: deploy
+        isDefault: true
+
+  - id: expose-service
+    apply:
+      component: app-service
+
+  - id: expose-route
+    apply:
+      component: app-route
+
+events:
+  postStart:
+    - install-deps
