@@ -14,46 +14,17 @@ components:
     kubernetes:
       uri: k8s/deployment.yaml
 
-  - name: app-service
-    kubernetes:
-      uri: k8s/service.yaml
-
-  - name: app-route
-    kubernetes:
-      uri: k8s/route.yaml
-
 commands:
-  - id: build-image
+  - id: build
     apply:
       component: app-image
       group:
         kind: build
         isDefault: true
 
-  - id: deploy-app
+  - id: deploy
     apply:
       component: app-deployment
       group:
         kind: deploy
         isDefault: true
-
-  - id: expose-service
-    apply:
-      component: app-service
-
-  - id: expose-route
-    apply:
-      component: app-route
-
-  - id: deploy-k8s
-    composite:
-      commands:
-        - deploy-app
-        - expose-service
-        - expose-route
-
-  - id: deploy
-    composite:
-      commands:
-        - build-image
-        - deploy-k8s
